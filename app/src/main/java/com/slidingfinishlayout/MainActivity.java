@@ -14,8 +14,7 @@ public class MainActivity extends Activity implements SlidingFinishView.SlidingF
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         view= (SlidingFinishView) findViewById(R.id.activity_main);
-//        view.setSlideEnable(false);
-//        view.setVisibility(View.INVISIBLE);
+//        view.setSlidingDirection(SlidingFinishView.Horizontal);
     }
 
     @Override

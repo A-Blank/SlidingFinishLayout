@@ -3,12 +3,17 @@ package com.slidingfinishlayout;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Color;
+import android.support.annotation.IntDef;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.OverScroller;
+import android.widget.RelativeLayout;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 
 /**
  * Created by 丶 on 2017/3/29.
@@ -18,7 +23,21 @@ import android.widget.OverScroller;
  * 滑动结束Activity的布局实现
  */
 
-public class SlidingFinishView extends FrameLayout {
+public class SlidingFinishView extends RelativeLayout {
+
+    /**
+     * 滑动方向
+     */
+    public static final int Default = 0x00000000;
+    public static final int Horizontal = 0x00000004;
+    public static final int Vertical = 0x00000008;
+
+    @IntDef({Default, Horizontal, Vertical})
+    @Retention(RetentionPolicy.SOURCE)
+    public @interface Deraction {
+    }
+
+    private int SlidingDrection;
 
     /**
      * 记录先前的点击坐标点
@@ -31,6 +50,8 @@ public class SlidingFinishView extends FrameLayout {
     private OverScroller scroller;
     private SlidingFinishCallback callback;
     private boolean InterceptFlag = false;
+
+
     private boolean flag;
 
     /**
@@ -54,15 +75,25 @@ public class SlidingFinishView extends FrameLayout {
         Init(context);
     }
 
+    /**
+     * 设置是否支持滑动
+     */
     public void setSlideEnable(boolean Enable) {
         SlidingEnable = Enable;
     }
 
+    /**
+     * 设置滑动方向
+     */
+    public void setSlidingDirection(@Deraction int Derction) {
+        SlidingDrection = Derction;
+    }
+
     public void Init(Context context) {
-        callback = (SlidingFinishCallback) context;
+//        callback = (SlidingFinishCallback) context;
         scroller = new OverScroller(context);
         SlidingEnable = true;
-
+        SlidingDrection = Default;
     }
 
     @Override
@@ -95,23 +126,44 @@ public class SlidingFinishView extends FrameLayout {
                 }
                 int subX = (int) (X - oldX);
                 int subY = (int) (Y - oldY);
-                viewGroup.scrollBy(0, -subY);
-                setAlpha(viewGroup.getScrollY());
+                if (SlidingDrection == SlidingFinishView.Default) {
+                    viewGroup.scrollBy(-subX, -subY);
+//                    setAlpha(viewGroup.getScrollX()>viewGroup.getScrollY()?viewGroup.getScaleX()*1.0f:viewGroup.getScrollY()*1.0f);
+                } else if (SlidingDrection == SlidingFinishView.Horizontal) {
+                    viewGroup.scrollBy(-subX, 0);
+                } else if (SlidingDrection == SlidingFinishView.Vertical) {
+                    viewGroup.scrollBy(0, -subY);
+                }
+                setAlpha(viewGroup.getScrollX(), viewGroup.getScrollY());
                 oldX = X;
                 oldY = Y;
                 break;
             case MotionEvent.ACTION_UP:
                 if (Math.abs(viewGroup.getScrollY() * 3) > viewGroup.getHeight() || Math.abs(viewGroup.getScrollX() * 3) > viewGroup.getWidth()) {
-                    if (viewGroup.getScrollY() < 0) {
-                        scroller.startScroll(0, viewGroup.getScrollY(), 0, -viewGroup.getHeight() + viewGroup.getScrollY(), 1000);
-                    }
-                    if (viewGroup.getScrollY() > 0) {
+                    if (viewGroup.getScrollX() < 0 && viewGroup.getScrollY() < 0) {
+                        scroller.startScroll(viewGroup.getScrollX(), viewGroup.getScrollY(),
+                                -viewGroup.getWidth() + viewGroup.getScrollX(), -viewGroup.getHeight() + viewGroup.getScrollY(), 1000);
+                    } else if (viewGroup.getScrollX() < 0 && viewGroup.getScrollY() > 0) {
+                        scroller.startScroll(viewGroup.getScrollX(), viewGroup.getScrollY(),
+                                -viewGroup.getWidth() + viewGroup.getScrollX(), viewGroup.getHeight() - viewGroup.getScrollY(), 1000);
+                    } else if (viewGroup.getScrollX() > 0 && viewGroup.getScrollY() < 0) {
+                        scroller.startScroll(viewGroup.getScrollX(), viewGroup.getScrollY(),
+                                viewGroup.getWidth() - viewGroup.getScrollX(), -viewGroup.getHeight() + viewGroup.getScrollY(), 1000);
+                    } else if (viewGroup.getScrollX() > 0 && viewGroup.getScrollY() > 0) {
+                        scroller.startScroll(viewGroup.getScrollX(), viewGroup.getScrollY(),
+                                viewGroup.getWidth() - viewGroup.getScrollX(), viewGroup.getHeight() - viewGroup.getScrollY(), 1000);
+                    } else if (viewGroup.getScrollX() == 0 && viewGroup.getScrollY() > 0) {
                         scroller.startScroll(0, viewGroup.getScrollY(), 0, viewGroup.getHeight() - viewGroup.getScrollY(), 1000);
+                    } else if (viewGroup.getScrollX() == 0 && viewGroup.getScrollY() > 0) {
+                        scroller.startScroll(0, viewGroup.getScrollY(), 0, viewGroup.getHeight() - viewGroup.getScrollY(), 1000);
+                    } else if (viewGroup.getScrollX() > 0 && viewGroup.getScrollY() == 0) {
+                        scroller.startScroll(viewGroup.getScrollX(), 0, viewGroup.getWidth() - viewGroup.getScrollX(), 0, 1000);
+                    } else if (viewGroup.getScrollX() < 0 && viewGroup.getScrollY() == 0) {
+                        scroller.startScroll(viewGroup.getScrollX(), 0, -viewGroup.getWidth() + viewGroup.getScrollX(), 0, 1000);
                     }
                     flag = true;
                 } else {
-//                    Log.i("TAG", "action up");
-                    scroller.startScroll(0, viewGroup.getScrollY(), 0, -viewGroup.getScrollY(), 500);
+                    scroller.startScroll(viewGroup.getScrollX(), viewGroup.getScrollY(), -viewGroup.getScrollX(), -viewGroup.getScrollY(), 500);
                     flag = false;
                 }
                 oldX = oldY = 0;
@@ -139,7 +191,7 @@ public class SlidingFinishView extends FrameLayout {
             case MotionEvent.ACTION_DOWN:
                 InterceptDownX = ev.getRawX();
                 InterceptDownY = ev.getRawY();
-//                break;
+                break;
             case MotionEvent.ACTION_MOVE:
                 InterceptX = ev.getRawX();
                 InterceptY = ev.getRawY();
@@ -172,11 +224,11 @@ public class SlidingFinishView extends FrameLayout {
         super.computeScroll();
         if (scroller.computeScrollOffset()) {
             viewGroup.scrollTo(scroller.getCurrX(), scroller.getCurrY());
-            setAlpha(scroller.getCurrY());
+            setAlpha(scroller.getCurrX(), scroller.getCurrY());
             postInvalidate();
-            Log.i("TAG", "computeScroll:"+viewGroup.getScrollX()+" "+viewGroup.getWidth()+" "+viewGroup.getScrollY()+" "+viewGroup.getHeight());
-            if ( Math.abs(viewGroup.getScrollX())>= viewGroup.getWidth()||Math.abs(viewGroup.getScrollY())>= viewGroup.getHeight()) {
-                ((Activity)getContext()).finish();
+            Log.i("TAG", "computeScroll:" + viewGroup.getScrollX() + " " + viewGroup.getWidth() + " " + viewGroup.getScrollY() + " " + viewGroup.getHeight());
+            if (Math.abs(viewGroup.getScrollX()) >= viewGroup.getWidth() || Math.abs(viewGroup.getScrollY()) >= viewGroup.getHeight()) {
+                ((Activity) getContext()).finish();
             }
         }
     }
@@ -185,9 +237,12 @@ public class SlidingFinishView extends FrameLayout {
      * 改变背景透明度:
      * setAlpha改变的是整个view的透明度,setBackgroundColor才能改变Layout的背景透明度
      */
-    public void setAlpha(float CurrY) {
+    public void setAlpha(float CurrX, float CurrY) {
 
-        int alpha = (int) ((getHeight() - Math.abs(CurrY)) / getHeight() * 255);
+        int alphaX = (int) ((getWidth() - Math.abs(CurrX)) / getWidth() * 255);
+        int alphaY = (int) ((getHeight() - Math.abs(CurrY)) / getHeight() * 255);
+        int alpha = alphaX > alphaY ? alphaY : alphaX;
+//        if(alphaX==0)
         String alphaHex = Integer.toHexString(alpha);
         if (alphaHex.length() != 2) {
             alphaHex = "00";
